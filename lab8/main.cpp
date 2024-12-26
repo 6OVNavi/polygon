@@ -147,7 +147,7 @@ bool dfsShortestPath(int node, int target, vector<vector<pair<int, double>>>& gr
         }
     }
 
-    
+
     return false;
 }
 
@@ -190,6 +190,35 @@ vector<int> dijkstra(int n, int s, int f, vector<vector<pair<int, double>>>& gr)
     return path;
 }
 
+bool isPathShortest(const vector<int>& path, vector<vector<pair<int, double>>>& gr, double expectedDistance) {
+    if (path.empty()) return false;
+
+    double totalDistance = 0.0;
+
+    for (size_t i = 1; i < path.size(); ++i) {
+        int from = path[i - 1];
+        int to = path[i];
+
+        bool found = false;
+
+        for (const auto& edge : gr[from]) {
+            if (edge.first == to) {
+                totalDistance += edge.second;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            return false;
+        }
+    }
+
+    return abs(totalDistance - expectedDistance) < 1e-6; 
+}
+
+
+
 #include <chrono>
 
 using namespace std::chrono;
@@ -197,20 +226,20 @@ using namespace std::chrono;
 int main() {
     int n = 5;
     vector<Edge> edges = {
-        {0, 1, 2, 2.0, 3.0},
-        {1, 3, 4, 1.5, 2.5},
-        {2, -1, 3, -1.0, 2.0},
-        {3, 4, -1, 1.0, -1.0},
+        {1, 2, 3, 2.0, 3.0},
+        {2, 4, 5, 1.5, 2.5},
+        {3, 2, 4, 1.0, 2.0},
     };
 
-    edges = readGraph("output.txt");
-    n = 350881; //edges.size();
+    //edges = readGraph("output.txt");
+    //n = 350881; //edges.size();
 
     vector<vector<pair<int, double>>> gr = buildGraph(n, edges);
 
     makeGraphUndirected(gr);
 
-    int start = 37095, finish = 239852;
+    //int start = 37095, finish = 239852;
+    int start = 0, finish = 4;
 
     cout << "Data saved" << endl;
 
@@ -245,7 +274,7 @@ int main() {
     vector<int> currentPath = { start };
     vector<int> shortestPath;
 
-    //dfsShortestPath(start, finish, gr, globalVisited, visitedInPath, currentPath, shortestPath);
+    dfsShortestPath(start, finish, gr, globalVisited, visitedInPath, currentPath, shortestPath);
 
     clock_stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(clock_start - clock_stop);
@@ -259,13 +288,13 @@ int main() {
     cout << endl;
 
 
-    
+
 
 
     // Dijkstra
 
     clock_start = high_resolution_clock::now();
-    
+
     vector<int> dijkstraPath = dijkstra(n, start, finish, gr);
 
     clock_stop = high_resolution_clock::now();
@@ -284,6 +313,35 @@ int main() {
         }
         cout << endl;
     }
+
+    // Проверяем BFS
+    if (!bfsPath.empty()) {
+        double bfsExpectedDistance = bfsPath.size() - 1; // BFS работает с неполными графами, поэтому вес = числу переходов
+        cout << "BFS Path Validity: " << isPathShortest(bfsPath, gr, bfsExpectedDistance) << endl;
+    }
+
+    // Проверяем DFS
+    if (!shortestPath.empty()) {
+        double dfsExpectedDistance = shortestPath.size() - 1; // DFS также считает количество переходов
+        cout << "DFS Path Validity: " << isPathShortest(shortestPath, gr, dfsExpectedDistance) << endl;
+    }
+
+    // Проверяем Dijkstra
+    if (!dijkstraPath.empty()) {
+        double dijkstraExpectedDistance = 0.0;
+        for (size_t i = 1; i < dijkstraPath.size(); ++i) {
+            int from = dijkstraPath[i - 1];
+            int to = dijkstraPath[i];
+            for (const auto& edge : gr[from]) {
+                if (edge.first == to) {
+                    dijkstraExpectedDistance += edge.second;
+                    break;
+                }
+            }
+        }
+        cout << "Dijkstra Path Validity: " << isPathShortest(dijkstraPath, gr, dijkstraExpectedDistance) << endl;
+    }
+
 
     return 0;
 }
